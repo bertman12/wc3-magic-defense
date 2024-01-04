@@ -18,9 +18,9 @@
     "plugins": [
       {
         "transform": "war3-transformer",
-        "mapDir": "C:/Users/Me/Documents/GitHub/wc3-ts-template/maps/map.w3x",
-        "entryFile": "C:/Users/Me/Documents/GitHub/wc3-ts-template/src/main.ts",
-        "outputDir": "C:/Users/Me/Documents/GitHub/wc3-ts-template/dist/map.w3x"
+        "mapDir": "C:/Users/Eddy/Desktop/Personal  Projects/WARCRAFT PROJECTS/using-w3ts-v3.0.2/wc3-magic-defense/maps/magic-defense.w3x",
+        "entryFile": "C:/Users/Eddy/Desktop/Personal  Projects/WARCRAFT PROJECTS/using-w3ts-v3.0.2/wc3-magic-defense/src/main.ts",
+        "outputDir": "C:/Users/Eddy/Desktop/Personal  Projects/WARCRAFT PROJECTS/using-w3ts-v3.0.2/wc3-magic-defense/dist/magic-defense.w3x"
       }
     ],
     "types": [
