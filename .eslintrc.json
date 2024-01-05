@@ -1,0 +1,25 @@
+{
+    "root": true,
+    "env": {
+        "browser": false,
+        "es2021": true
+    },
+    "extends": [],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": ["@typescript-eslint", "import"],
+    "rules": {
+        "curly": "warn",
+        "no-empty": "warn",
+        "no-else-return": "error",
+        "no-extra-bind": "warn",
+        "no-useless-call": "warn",
+        "no-extra-boolean-cast": "warn",
+        "no-invalid-this": "error",
+        "prefer-const": "warn",
+        "yoda": "warn"
+    }
+}

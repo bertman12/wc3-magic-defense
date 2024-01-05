@@ -19,19 +19,6 @@ export function forEachUnitOfPlayerWithAbility(player: MapPlayer, abilityId: num
     });
 }
 
-/**
- * Calls a function for each player playing and is an ally of red.
- * @warning specific to map
- */
-export function forEachAlliedPlayer(cb: (player: MapPlayer, index: number) => void) {
-    Players.forEach((player, index) => {
-        //For testing purposes, include player[9] (the human ally) so their units can also be included when iterating the units OR i should make a separate function for all units.
-        if (player.slotState === PLAYER_SLOT_STATE_PLAYING && player.isPlayerAlly(Players[0]) && player != Players[25] && player != Players[27]) {
-            cb(player, index);
-        }
-    });
-}
-
 export function forEachPlayer(cb: (player: MapPlayer, index?: number) => void) {
     Players.forEach((p, index) => {
         cb(p, index);

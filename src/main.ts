@@ -1,4 +1,8 @@
 import { W3TS_HOOK, addScriptHook } from "w3ts/hooks";
+import { setup_createHero } from "./game/createHero";
+import { notifyPlayer, tColor } from "./utils/misc";
+import { trig_setCameraDistance } from "./utils/camera";
+import { setup_quests } from "./utils/quests";
 
 const BUILD_DATE = compiletime(() => new Date().toUTCString());
 const TS_VERSION = compiletime(() => require("typescript").version);
@@ -21,6 +25,14 @@ function tsMain() {
     print(`Build: ${BUILD_DATE}`);
     print(`Typescript: v${TS_VERSION}`);
     print(`Transpiler: v${TSTL_VERSION}`);
+    print(" ");
+
+    notifyPlayer(
+      `${tColor("Objective", "goldenrod")}: Find a core to build your base on.`
+    );
+    trig_setCameraDistance();
+    setup_quests()
+    setup_createHero();
   } catch (e) {
     print(e);
   }

@@ -33,3 +33,267 @@ STRING 7
 Force 1
 }
 
+STRING 8
+// Units: H000 (Blood Elf Survivor), Name (Name)
+{
+Blood Elf Survivor
+}
+
+STRING 9
+// Items: I000 (Kinetic Blade), Name (Name)
+{
+Kinetic Blade
+}
+
+STRING 10
+// Items: I000 (Kinetic Blade), Ubertip (Tooltip - Extended)
+{
++25 Damage   |n+10% Attack Speed
+}
+
+STRING 13
+// Units: u000 (Depleted Mana Core), Tip (Tooltip - Basic)
+{
+Use Depleted Core
+}
+
+STRING 14
+// Units: u000 (Depleted Mana Core), Ubertip (Tooltip - Extended)
+{
+Claims a depleted mana core to be used for your base.
+}
+
+STRING 15
+// Units: n000 (Mana Core Foundation), Name (Name)
+{
+Mana Core Foundation
+}
+
+STRING 16
+// Units: u000 (Depleted Mana Core), Name (Name)
+{
+Depleted Mana Core
+}
+
+STRING 17
+// Units: n001 (Defunct Tower), Name (Name)
+{
+Defunct Tower
+}
+
+STRING 18
+// Units: h001 (Wall), Name (Name)
+{
+Wall
+}
+
+STRING 20
+// Units: h003 (Improved Wall 1), Name (Name)
+{
+Improved Wall 1
+}
+
+STRING 21
+// Units: h002 (Mana Wall 1), Name (Name)
+{
+Mana Wall 1
+}
+
+STRING 22
+// Units: h004 (Tower Base), Name (Name)
+{
+Tower Base
+}
+
+STRING 23
+// Units: h006 (Mana Tower), Name (Name)
+{
+Mana Tower
+}
+
+STRING 24
+// Units: h007 (Crippling Tower), Name (Name)
+{
+Crippling Tower
+}
+
+STRING 25
+// Units: h008 (Summoning Tower), Name (Name)
+{
+Summoning Tower
+}
+
+STRING 26
+// Units: h009 (Lightning Tower), Name (Name)
+{
+Lightning Tower
+}
+
+STRING 27
+// Units: h00A (Armor Piercing Tower), Name (Name)
+{
+Armor Piercing Tower
+}
+
+STRING 28
+// Units: h00B (Multishot Tower), Name (Name)
+{
+Multishot Tower
+}
+
+STRING 29
+// Units: h00C (Freezing Tower), Name (Name)
+{
+Freezing Tower
+}
+
+STRING 30
+// Units: h001 (Wall), Tip (Tooltip - Basic)
+{
+Build Wall
+}
+
+STRING 31
+// Units: h002 (Mana Wall 1), Tip (Tooltip - Basic)
+{
+Upgrade to Mana Wall 1
+}
+
+STRING 32
+// Units: h003 (Improved Wall 1), Tip (Tooltip - Basic)
+{
+Upgrade to Improved Wall 1
+}
+
+STRING 33
+// Units: h004 (Tower Base), Tip (Tooltip - Basic)
+{
+Build Tower Base
+}
+
+STRING 34
+// Units: h006 (Mana Tower), Tip (Tooltip - Basic)
+{
+Upgrade to Mana Tower
+}
+
+STRING 35
+// Units: h007 (Crippling Tower), Tip (Tooltip - Basic)
+{
+Build Crippling Tower
+}
+
+STRING 36
+// Units: h008 (Summoning Tower), Tip (Tooltip - Basic)
+{
+Upgrade to Summoning Tower
+}
+
+STRING 37
+// Units: h009 (Lightning Tower), Tip (Tooltip - Basic)
+{
+Upgrade to Lightning Tower
+}
+
+STRING 38
+// Units: h00A (Armor Piercing Tower), Tip (Tooltip - Basic)
+{
+Upgrade to Armor Piercing Tower
+}
+
+STRING 39
+// Units: h00B (Multishot Tower), Tip (Tooltip - Basic)
+{
+Upgrade to Multishot Tower
+}
+
+STRING 40
+// Units: h00C (Freezing Tower), Tip (Tooltip - Basic)
+{
+Upgrade to Crippling Tower
+}
+
+STRING 41
+// Units: h00D (Flame Wall), Name (Name)
+{
+Flame Wall
+}
+
+STRING 42
+// Units: h00D (Flame Wall), Tip (Tooltip - Basic)
+{
+Upgrade to Flame Wall
+}
+
+STRING 43
+// Units: h001 (Wall), Hotkey (Hotkey)
+{
+W
+}
+
+STRING 44
+// Units: h002 (Mana Wall 1), Hotkey (Hotkey)
+{
+W
+}
+
+STRING 45
+// Units: h00A (Armor Piercing Tower), Hotkey (Hotkey)
+{
+W
+}
+
+STRING 47
+// Units: h003 (Improved Wall 1), Hotkey (Hotkey)
+{
+Q
+}
+
+STRING 48
+// Units: h00C (Freezing Tower), Hotkey (Hotkey)
+{
+E
+}
+
+STRING 50
+// Units: h006 (Mana Tower), Hotkey (Hotkey)
+{
+D
+}
+
+STRING 51
+// Units: h007 (Crippling Tower), Hotkey (Hotkey)
+{
+A
+}
+
+STRING 52
+// Units: h008 (Summoning Tower), Hotkey (Hotkey)
+{
+F
+}
+
+STRING 53
+// Units: h009 (Lightning Tower), Hotkey (Hotkey)
+{
+S
+}
+
+STRING 54
+// Units: h00B (Multishot Tower), Hotkey (Hotkey)
+{
+R
+}
+
+STRING 55
+// Units: h005 (Guard Tower), Hotkey (Hotkey)
+{
+Q
+}
+
+STRING 56
+// Units: h00D (Flame Wall), Hotkey (Hotkey)
+{
+E
+}
+

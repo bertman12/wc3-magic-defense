@@ -1,32 +1,38 @@
 function InitGlobals()
 end
 
-function CreateUnitsForPlayer0()
+function CreateBuildingsForPlayer0()
 local p = Player(0)
 local u
 local unitID
 local t
 local life
 
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), -1.3, 12.2, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), -253.5, 259.7, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), 243.5, 253.2, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), 244.9, -283.1, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), -253.7, -278.0, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), 14.1, -438.3, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), 392.0, -9.9, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), -386.8, 9.1, 231.126, FourCC("hspt"))
-u = BlzCreateUnitWithSkin(p, FourCC("hspt"), 1.5, 409.0, 231.126, FourCC("hspt"))
+u = BlzCreateUnitWithSkin(p, FourCC("h002"), -1984.0, -640.0, 270.000, FourCC("h002"))
+end
+
+function CreateNeutralPassiveBuildings()
+local p = Player(PLAYER_NEUTRAL_PASSIVE)
+local u
+local unitID
+local t
+local life
+
+u = BlzCreateUnitWithSkin(p, FourCC("n001"), -3136.0, -64.0, 270.000, FourCC("n001"))
+SetResourceAmount(u, 12500)
+u = BlzCreateUnitWithSkin(p, FourCC("n000"), -2560.0, -512.0, 270.000, FourCC("n000"))
+SetResourceAmount(u, 12500)
 end
 
 function CreatePlayerBuildings()
+CreateBuildingsForPlayer0()
 end
 
 function CreatePlayerUnits()
-CreateUnitsForPlayer0()
 end
 
 function CreateAllUnits()
+CreateNeutralPassiveBuildings()
 CreatePlayerBuildings()
 CreatePlayerUnits()
 end
@@ -46,6 +52,7 @@ end
 function main()
 SetCameraBounds(-29952.0 + GetCameraMargin(CAMERA_MARGIN_LEFT), -30208.0 + GetCameraMargin(CAMERA_MARGIN_BOTTOM), 29952.0 - GetCameraMargin(CAMERA_MARGIN_RIGHT), 29696.0 - GetCameraMargin(CAMERA_MARGIN_TOP), -29952.0 + GetCameraMargin(CAMERA_MARGIN_LEFT), 29696.0 - GetCameraMargin(CAMERA_MARGIN_TOP), 29952.0 - GetCameraMargin(CAMERA_MARGIN_RIGHT), -30208.0 + GetCameraMargin(CAMERA_MARGIN_BOTTOM))
 SetDayNightModels("Environment\\DNC\\DNCDalaran\\DNCDalaranTerrain\\DNCDalaranTerrain.mdl", "Environment\\DNC\\DNCDalaran\\DNCDalaranUnit\\DNCDalaranUnit.mdl")
+SetTerrainFogEx(0, 5000.0, 6000.0, 0.500, 0.000, 0.000, 0.000)
 NewSoundEnvironment("Default")
 SetAmbientDaySound("DalaranRuinsDay")
 SetAmbientNightSound("DalaranRuinsNight")
