@@ -18,6 +18,7 @@ try {
 
     const wtsFileContents = fs.readFileSync(wtsFile, "utf8");
     const alreadyCreated = fs.pathExistsSync("src/parser-test");
+
     if (alreadyCreated) {
         // fs.writeFileSync("src/parser-test/stuff.txt", wtsFileContents);
         generateEnumsFromWTS(wtsFileContents);
@@ -86,7 +87,10 @@ function generateEnumsFromWTS(fileContents: string) {
     let lastReadObjectName = "";
     let lastReadFourCC = "";
     let lastReadObjectType: WTS_ObjectTypes | null = null;
+    let haveBegunReadingNewObjectName = false;
+    let haveEndedReadingNewObjectName = false;
     let grabFourCCFromNextWord = false;
+
     //This does preserve the line breaks and the spaces
     for (let x = 0; x < fileContents.length; x++) {
         const char = fileContents[x];
@@ -98,35 +102,49 @@ function generateEnumsFromWTS(fileContents: string) {
         if (char === " ") {
             const knownObjectType = objectTypeIdentifier.has(lastReadWord);
 
+            //We have our object type and four cc and now we have our object name
+            if (lastReadFourCC && lastReadObjectType) {
+                newFileContents += `\n//found object name`;
+
+                //We have read both an object type and a four CC, therefore our next word will now be the object name
+                //Here we have confirmed that the last read word will be the object name, according to how the wts file outputs object data
+
+                //We identify if we are at the end of our object name
+                if (lastReadWord.includes(")")) {
+                    haveEndedReadingNewObjectName = true;
+                }
+
+                //Clean the last read word
+                lastReadWord = lastReadWord.replace("(", "");
+                lastReadWord = lastReadWord.replace(")", "");
+
+                //We know we are reading an object name, therefore we must start concatenating the name for the enum member name
+                lastReadObjectName += lastReadWord;
+            }
+
+            if (haveEndedReadingNewObjectName && lastReadObjectName && lastReadObjectType) {
+                let objectTypeEnumStringContents = objectTypesEnumStrings.get(lastReadObjectType);
+                const newLine = `\n${lastReadObjectName} = FourCC(${lastReadFourCC}),`;
+                objectTypeEnumStringContents += newLine;
+
+                newFileContents += `\n//a new enum member was created - ${newLine}`;
+
+                //Now clear the data for our temp variables
+                lastReadWord = "";
+                lastReadObjectName = "";
+                lastReadFourCC = "";
+                lastReadObjectType = null;
+                grabFourCCFromNextWord = false;
+            }
+
             if (grabFourCCFromNextWord && lastReadObjectType) {
                 lastReadFourCC = lastReadWord;
             }
 
-            //We have our object type and four cc and now we have our object name
-            if (lastReadFourCC && lastReadObjectType && lastReadObjectType) {
-                let objectTypeEnum = objectTypesEnumStrings.get(lastReadObjectType);
-                lastReadFourCC = lastReadWord;
-
-                if (objectTypeEnum) {
-                    //Here we have confirmed that the last read word will be the object name, according to how the wts file outputs object data
-
-                    lastReadObjectName = lastReadWord;
-                    //Get rid of parentheses
-                    lastReadObjectName = lastReadObjectName.replace("(", "");
-                    lastReadObjectName = lastReadObjectName.replace(")", "");
-
-                    objectTypeEnum += `\n${lastReadObjectName} = FourCC(${lastReadFourCC}),`;
-
-                    //Now clear the data for our temp variables
-                    lastReadWord = "";
-                    lastReadObjectName = "";
-                    lastReadFourCC = "";
-                    lastReadObjectType = null;
-                }
-            }
-
             if (knownObjectType) {
                 grabFourCCFromNextWord = true;
+                newFileContents += "\n//found object type identifier";
+
                 lastReadObjectType = objectTypeIdentifier.get(lastReadWord) ?? null;
             } else {
                 grabFourCCFromNextWord = false;
@@ -135,6 +153,7 @@ function generateEnumsFromWTS(fileContents: string) {
             //reset word after we have made use of it
             lastReadWord = "";
         } else {
+            //Building the next word
             lastReadWord += char;
         }
     }
@@ -146,5 +165,5 @@ function generateEnumsFromWTS(fileContents: string) {
         newFileContents += `\nexport enum ${newEnumName}{\n${value}\n}`;
     }
 
-    fs.writeFileSync("src/parser-test/stuff.txt", newFileContents);
+    fs.writeFileSync("src/parser-test/GeneratedEnums.ts", newFileContents);
 }
