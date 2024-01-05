@@ -1,14 +1,14 @@
 function InitGlobals()
 end
 
-function CreateBuildingsForPlayer0()
-local p = Player(0)
-local u
-local unitID
-local t
-local life
+function CreateAllItems()
+local itemID
 
-u = BlzCreateUnitWithSkin(p, FourCC("h002"), -1984.0, -640.0, 270.000, FourCC("h002"))
+BlzCreateItemWithSkin(FourCC("I000"), -1303.9, -25.5, FourCC("I000"))
+BlzCreateItemWithSkin(FourCC("I001"), -1347.7, -170.8, FourCC("I001"))
+BlzCreateItemWithSkin(FourCC("I002"), -1179.9, 52.9, FourCC("I002"))
+BlzCreateItemWithSkin(FourCC("I003"), -1030.0, 174.7, FourCC("I003"))
+BlzCreateItemWithSkin(FourCC("I005"), -871.8, 292.4, FourCC("I005"))
 end
 
 function CreateNeutralPassiveBuildings()
@@ -25,7 +25,6 @@ SetResourceAmount(u, 12500)
 end
 
 function CreatePlayerBuildings()
-CreateBuildingsForPlayer0()
 end
 
 function CreatePlayerUnits()
@@ -57,6 +56,7 @@ NewSoundEnvironment("Default")
 SetAmbientDaySound("DalaranRuinsDay")
 SetAmbientNightSound("DalaranRuinsNight")
 SetMapMusic("Music", true, 0)
+CreateAllItems()
 CreateAllUnits()
 InitBlizzard()
 InitGlobals()

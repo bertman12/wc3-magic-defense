@@ -297,3 +297,153 @@ STRING 56
 E
 }
 
+STRING 57
+// Units: n002 (Villager), Tip (Tooltip - Basic)
+{
+Train Villager
+}
+
+STRING 58
+// Units: n002 (Villager), Ubertip (Tooltip - Extended)
+{
+A hearty villager. |n|n+10 Gold every 10 seconds.
+}
+
+STRING 59
+// Units: n002 (Villager), EditorSuffix (Name - Editor Suffix)
+{
+ (Male - income)
+}
+
+STRING 60
+// Units: h00E (Upgrade Center), Name (Name)
+{
+Upgrade Center
+}
+
+STRING 61
+// Items: I001 (Personal Mana Shield - I), Name (Name)
+{
+Personal Mana Shield - I
+}
+
+STRING 62
+// Items: I002 (Personal Fountain - I), Name (Name)
+{
+Personal Fountain - I
+}
+
+STRING 63
+// Abilities: A000 (Multishot), Name (Name)
+{
+Multishot
+}
+
+STRING 64
+// Abilities: A000 (Multishot), EditorSuffix (Editor Suffix)
+{
+(Item)
+}
+
+STRING 65
+// Items: I003 (Multishot Item - I), Name (Name)
+{
+Multishot Item - I
+}
+
+STRING 66
+// Items: I004 (Flame Shield - I), Name (Name)
+{
+Flame Shield - I
+}
+
+STRING 67
+// Items: I005 (Flame Rune), Name (Name)
+{
+Flame Rune
+}
+
+STRING 68
+// Abilities: A001 (Flame Rune), Name (Name)
+{
+Flame Rune
+}
+
+STRING 69
+// Abilities: A001 (Flame Rune), EditorSuffix (Editor Suffix)
+{
+(Pheonix Fire)
+}
+
+STRING 70
+// Abilities: A002 (Teleport), Name (Name)
+{
+Teleport
+}
+
+STRING 71
+// Abilities: A002 (Teleport), Tip (Tooltip - Normal)
+{
+Teleport
+}
+
+STRING 72
+// Abilities: A002 (Teleport), Ubertip (Tooltip - Normal - Extended)
+{
+Teleports the hero to an allied unit or building.
+}
+
+STRING 73
+// Abilities: A002 (Teleport), Hotkey (Hotkey - Normal)
+{
+T
+}
+
+STRING 74
+// Upgrades: R000 (Iron Forged Swords,Steel Forged Swords,Mithril Forged Swords), Name (Name)
+{
+Tower Damage
+}
+
+STRING 75
+// Upgrades: R001 (Chaos), Name (Name)
+{
+Base Null
+}
+
+STRING 76
+// Upgrades: R002 (Long Rifles), Name (Name)
+{
+Tower Range
+}
+
+STRING 77
+// Units: h00F (Item Shop), Name (Name)
+{
+Item Shop
+}
+
+STRING 78
+// Upgrades: R003 (Well Spring), Name (Name)
+{
+Improved Mana Reserves
+}
+
+STRING 79
+// Upgrades: R004 (Chaos), Name (Name)
+{
+Advanced Item Shop
+}
+
+STRING 80
+// Upgrades: R005 (Chaos), Name (Name)
+{
+Max Cores
+}
+
+STRING 81
+// Units: h00G (testing parser), Name (Name)
+{
+testing parser
+}
+

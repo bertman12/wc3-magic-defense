@@ -30,6 +30,7 @@ function tsMain() {
     notifyPlayer(
       `${tColor("Objective", "goldenrod")}: Find a core to build your base on.`
     );
+    
     trig_setCameraDistance();
     setup_quests()
     setup_createHero();
