@@ -40,9 +40,10 @@ function generateEnumsFromWTS(fileContents: string) {
         ObjectType,
         FourCC,
         ObjectName,
-        StringTypeShort, //tip, ubertip, name
-        StringType, //Name, Tooltip, Tooltip Extended
+        MetaLineTypeShort, //tip, ubertip, name
+        MetaLineType, //Name, Tooltip, Tooltip Extended
     }
+
     //For fucking around
     const charReplacementMap = new Map<string, string>([
         [" ", "-space-"],
@@ -78,6 +79,14 @@ function generateEnumsFromWTS(fileContents: string) {
         ["Upgrades", "WTS_Upgrades"],
     ]);
 
+    const uniqueWordsForEnum = new Map<WTS_ObjectTypes, Set<string>>([
+        ["Units", new Set<string>()],
+        ["Abilities", new Set<string>()],
+        ["Items", new Set<string>()],
+        ["Buffs", new Set<string>()],
+        ["Upgrades", new Set<string>()],
+    ]);
+
     /**
      * @goals
      *
@@ -97,7 +106,6 @@ function generateEnumsFromWTS(fileContents: string) {
     // ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
     let currentLineWords: string[] = [];
     let lastReadWord = "";
-    // let isReadingMultiWordObjectName = false;
     let concatenatingWordsInProgress = false;
     let firstCompositeWordAdded = false;
 
@@ -113,41 +121,50 @@ function generateEnumsFromWTS(fileContents: string) {
     *  5 - (Name)
      */
 
+    /**
+     * for tracking duplicate words, we can simply add all the object names that are in each enum block into a set or words, if the set already has the object name, then we can append the fourCC code to the name - Chaos_R004
+     */
+
     //This does preserve the line breaks and the spaces
     for (let x = 0; x < fileContents.length; x++) {
         const char = fileContents[x];
-        const nextChar = fileContents[x + 1];
 
         //At this point, we might have all the relevant data to create the new enum member, now we simple check our array of words for the line
         if (char === "\n") {
-            // if (currentLine.length > 1) {
-            //     newFileContents += `\n//`;
-            //     currentLine.forEach((word, index) => {
-            //         newFileContents += `(index: ${index}) ${word} `;
-            //     });
-            // }
+            if (currentLineWords[LineWordIndexMap.MetaLineTypeShort] === "Name" && currentLineWords[LineWordIndexMap.ObjectName]) {
+                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("(", "");
+                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(")", "");
+                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(",", "");
 
-            if (currentLineWords.includes("Name") && currentLineWords[3]) {
-                currentLineWords[3] = currentLineWords[3]?.replace("(", "");
-                currentLineWords[3] = currentLineWords[3]?.replace(")", "");
-                currentLineWords[3] = currentLineWords[3]?.replace(",", "");
+                const enumForObjectType = objectTypeIdentifier.get(currentLineWords[LineWordIndexMap.ObjectType]);
+                const currentEnumString = objectTypesEnumStrings.get(enumForObjectType as WTS_ObjectTypes);
 
-                const pattern = new RegExp("[a-z]");
-                for (let x = 0; x < currentLineWords[3].length; x++) {
-                    const c = currentLineWords[3][x];
+                const pattern = new RegExp("^[A-Za-z0-9]+$");
+
+                for (let x = 0; x < currentLineWords[LineWordIndexMap.ObjectName].length; x++) {
+                    const c = currentLineWords[LineWordIndexMap.ObjectName][x];
 
                     if (!pattern.test(c)) {
                         //Replace the illegal character
-                        currentLineWords[3].replace(currentLineWords[3][x], "_");
+                        currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(currentLineWords[LineWordIndexMap.ObjectName][x], "_");
                     }
                 }
 
-                const newLine = `\n${currentLineWords[3]} = FourCC("${currentLineWords[2]}"),`;
+                const enumMemberWordSet = uniqueWordsForEnum.get(enumForObjectType as WTS_ObjectTypes);
 
-                const objectType = objectTypeIdentifier.get(currentLineWords[1]);
-                const currentValue = objectTypesEnumStrings.get(objectType as WTS_ObjectTypes);
+                if (enumMemberWordSet?.has(currentLineWords[LineWordIndexMap.ObjectName])) {
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}  ${currentLineWords[LineWordIndexMap.ObjectName]}_${currentLineWords[LineWordIndexMap.FourCC]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
 
-                objectTypesEnumStrings.set(objectType as WTS_ObjectTypes, currentValue + newLine);
+                    objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
+                } else {
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}  ${currentLineWords[LineWordIndexMap.ObjectName]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
+
+                    objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
+
+                    if (enumMemberWordSet) {
+                        enumMemberWordSet.add(currentLineWords[LineWordIndexMap.ObjectName]);
+                    }
+                }
             }
 
             //Current line is reset once we reach new line symbol
@@ -217,7 +234,7 @@ function generateEnumsFromWTS(fileContents: string) {
         const newEnumName = objectTypeEnumNames.get(key);
 
         if (key && value) {
-            newFileContents += `\nexport enum ${newEnumName}{\n${value}\n}`;
+            newFileContents += `\nexport enum ${newEnumName}{\n${value}\n}\n`;
         }
     }
 
