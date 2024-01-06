@@ -28,7 +28,7 @@ export enum WTS_Items{
 
 export enum WTS_Abilities{
 	Multishot = FourCC("A000"),
-	Fla_rm_re_r_r_ = FourCC("A001"),
+	Fl_ra_rm_re_r_r_ = FourCC("A001"),
 }
 
 export enum WTS_Upgrades{

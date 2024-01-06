@@ -29,12 +29,13 @@ try {
     logger.error(err.toString());
     logger.error(`There was an error generating the definition file for '${luaFile}'`);
 }
+
 //79 character limit for object name on a single line unless its in the {} section
 function generateEnumsFromWTS(fileContents: string) {
     let newFileContents = "";
     type WTS_ObjectTypes = "Units" | "Items" | "Destructibles" | "Doodads" | "Abilities" | "Buffs" | "Upgrades";
 
-    enum LineWordIndexMap {
+    enum TitleLineWordIndexMap {
         StartIdentifier,
         ObjectType,
         FourCC,
@@ -55,7 +56,7 @@ function generateEnumsFromWTS(fileContents: string) {
     ]);
 
     //Maps which specific strings in the file contents will map to which object type in the editor
-    const objectTypeIdentifierToEnumName = new Map<string, WTS_ObjectTypes>([
+    const objectTypeIdentifierToObjectType = new Map<string, WTS_ObjectTypes>([
         ["Units:", "Units"],
         ["Items:", "Items"],
         ["Destructibles:", "Destructibles"],
@@ -86,67 +87,146 @@ function generateEnumsFromWTS(fileContents: string) {
         ["Upgrades", new Set<string>()],
     ]);
 
-    // ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
+    enum Token {
+        DataBegin = "{",
+        DataEnd = "}",
+        TitleLineIndicator = "//",
+    }
+
+    enum ObjectDataTypeIndicator {
+        Name = "Name",
+        Tooltip = "Tip",
+        TooltipExtended = "Ubertip",
+        EditorSuffix = "EditorSuffix",
+        Hotkey = "Hotkey",
+    }
+
     let currentLineWords: string[] = [];
     let lastReadWord = "";
     let concatenatingWordsInProgress = false;
     let firstCompositeWordAdded = false;
 
+    let dataLineWords: string[] = [];
+    let beginCapturingDataLineWords = false;
+
+    //used to hold onto the title line while we are parsing the following lines for the actual data. Title lines are indicated with //
+    // ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
+    let titleLineWords: string[] = [];
+
     for (let x = 0; x < fileContents.length; x++) {
         const char = fileContents[x];
 
         if (char === "\n") {
-            if (currentLineWords[LineWordIndexMap.MetaLineTypeShort] === "Name" && currentLineWords[LineWordIndexMap.ObjectName]) {
-                const enumForObjectType = objectTypeIdentifierToEnumName.get(currentLineWords[LineWordIndexMap.ObjectType]);
+            if (currentLineWords.includes(Token.TitleLineIndicator) && currentLineWords[TitleLineWordIndexMap.MetaLineTypeShort] == ObjectDataTypeIndicator.Name) {
+                //Copy words
+                titleLineWords = [...currentLineWords];
+            }
+
+            if (currentLineWords.includes(Token.DataEnd)) {
+                //Create the enum member
+                beginCapturingDataLineWords = false;
+
+                const enumForObjectType = objectTypeIdentifierToObjectType.get(titleLineWords[TitleLineWordIndexMap.ObjectType]);
                 const currentEnumString = objectTypesEnumStrings.get(enumForObjectType as WTS_ObjectTypes);
 
-                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("(", "");
-                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(")", "");
-                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(",", "");
-
                 //Clean word before checking if name is already used
-                currentLineWords[LineWordIndexMap.ObjectName] = removeColorCodingFromWord(currentLineWords[LineWordIndexMap.ObjectName]);
-                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("|r", "");
-                // currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("|", "");
+                dataLineWords[0] = dataLineWords[0].replace("(", "");
+                dataLineWords[0] = dataLineWords[0].replace(")", "");
+                dataLineWords[0] = dataLineWords[0].replace(",", "");
+                dataLineWords[0] = removeColorCodingFromWord(dataLineWords[0]);
+                dataLineWords[0] = dataLineWords[0].replace("|r", "");
 
                 const pattern = new RegExp("^[A-Za-z0-9]+$");
 
-                for (let x = 0; x < currentLineWords[LineWordIndexMap.ObjectName].length; x++) {
-                    const c = currentLineWords[LineWordIndexMap.ObjectName][x];
+                //Replace illegal characters
+                for (let x = 0; x < dataLineWords[0].length; x++) {
+                    const c = dataLineWords[0][x];
 
                     if (!pattern.test(c)) {
-                        //Replace the illegal character
-                        currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(currentLineWords[LineWordIndexMap.ObjectName][x], "_");
+                        dataLineWords[0] = dataLineWords[0].replace(dataLineWords[0][x], "_");
                     }
                 }
 
-                //9 characters following the |
                 const enumMemberWordSet = uniqueEnumMemberNames.get(enumForObjectType as WTS_ObjectTypes);
 
                 //Add the new enum member
-                if (enumMemberWordSet?.has(currentLineWords[LineWordIndexMap.ObjectName])) {
-                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[LineWordIndexMap.ObjectName]}_${currentLineWords[LineWordIndexMap.FourCC]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
+                if (enumMemberWordSet?.has(dataLineWords[0])) {
+                    //Handle duplicate name by appending _FourCC to end of name
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${dataLineWords[0]}_${titleLineWords[TitleLineWordIndexMap.FourCC]} = FourCC("${titleLineWords[TitleLineWordIndexMap.FourCC]}"),`;
 
                     objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
                 } else {
-                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[LineWordIndexMap.ObjectName]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${dataLineWords[0]} = FourCC("${titleLineWords[TitleLineWordIndexMap.FourCC]}"),`;
 
                     objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
 
                     if (enumMemberWordSet) {
-                        enumMemberWordSet.add(currentLineWords[LineWordIndexMap.ObjectName]);
+                        enumMemberWordSet.add(dataLineWords[0]);
+                    }
+                }
+            }
+
+            if (beginCapturingDataLineWords) {
+                //Add words to the array
+                dataLineWords = [...dataLineWords, ...currentLineWords];
+            }
+
+            if (currentLineWords.includes(Token.DataBegin)) {
+                //Create the enum member
+                beginCapturingDataLineWords = true;
+            }
+
+            if (currentLineWords[TitleLineWordIndexMap.MetaLineTypeShort] === ObjectDataTypeIndicator.Name && currentLineWords[TitleLineWordIndexMap.ObjectName]) {
+                const enumForObjectType = objectTypeIdentifierToObjectType.get(currentLineWords[TitleLineWordIndexMap.ObjectType]);
+                const currentEnumString = objectTypesEnumStrings.get(enumForObjectType as WTS_ObjectTypes);
+
+                //Clean word before checking if name is already used
+                currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace("(", "");
+                currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace(")", "");
+                currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace(",", "");
+                currentLineWords[TitleLineWordIndexMap.ObjectName] = removeColorCodingFromWord(currentLineWords[TitleLineWordIndexMap.ObjectName]);
+                currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace("|r", "");
+
+                const pattern = new RegExp("^[A-Za-z0-9]+$");
+
+                //Replace illegal characters
+                for (let x = 0; x < currentLineWords[TitleLineWordIndexMap.ObjectName].length; x++) {
+                    const c = currentLineWords[TitleLineWordIndexMap.ObjectName][x];
+
+                    if (!pattern.test(c)) {
+                        currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace(currentLineWords[TitleLineWordIndexMap.ObjectName][x], "_");
+                    }
+                }
+
+                const enumMemberWordSet = uniqueEnumMemberNames.get(enumForObjectType as WTS_ObjectTypes);
+
+                //Add the new enum member
+                if (enumMemberWordSet?.has(currentLineWords[TitleLineWordIndexMap.ObjectName])) {
+                    //Handle duplicate name by appending _FourCC to end of name
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[TitleLineWordIndexMap.ObjectName]}_${currentLineWords[TitleLineWordIndexMap.FourCC]} = FourCC("${currentLineWords[TitleLineWordIndexMap.FourCC]}"),`;
+
+                    objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
+                } else {
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[TitleLineWordIndexMap.ObjectName]} = FourCC("${currentLineWords[TitleLineWordIndexMap.FourCC]}"),`;
+
+                    objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
+
+                    if (enumMemberWordSet) {
+                        enumMemberWordSet.add(currentLineWords[TitleLineWordIndexMap.ObjectName]);
                     }
                 }
             }
 
             //Current line is reset once we reach new line symbol
             currentLineWords = [];
+            dataLineWords = [];
+            titleLineWords = [];
             lastReadWord = "";
         }
 
-        if (char === " " && lastReadWord) {
+        if (isEndOfWord(char) && lastReadWord) {
             //detect if we need to concatenate words
-            if (shouldConcatWords(lastReadWord)) {
+            if (shouldConcatenateWords(lastReadWord, beginCapturingDataLineWords)) {
                 concatenatingWordsInProgress = true;
             }
 
@@ -195,8 +275,12 @@ function generateEnumsFromWTS(fileContents: string) {
     fs.writeFileSync("src/WTS Generated Enums/WTS_Enums.ts", newFileContents);
 }
 
-function shouldConcatWords(word: string) {
-    return word.includes("(") && !word.includes(")");
+function isEndOfWord(char: string) {
+    return char === " ";
+}
+
+function shouldConcatenateWords(word: string, insideDataContext: boolean) {
+    return (word.includes("(") && !word.includes(")")) || insideDataContext;
 }
 
 function isFinalWordInConcatenationSequence(word: string) {
