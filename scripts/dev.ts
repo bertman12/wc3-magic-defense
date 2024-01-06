@@ -20,11 +20,9 @@ try {
     const alreadyCreated = fs.pathExistsSync("src/parser-test");
 
     if (alreadyCreated) {
-        // fs.writeFileSync("src/parser-test/stuff.txt", wtsFileContents);
         generateEnumsFromWTS(wtsFileContents);
     } else {
         fs.mkdirSync("src/parser-test");
-        // fs.writeFileSync("src/parser-test/stuff.txt", wtsFileContents);
         generateEnumsFromWTS(wtsFileContents);
     }
 } catch (err: any) {
@@ -33,6 +31,16 @@ try {
 }
 
 type WTS_ObjectTypes = "Units" | "Items" | "Abilities" | "Buffs" | "Upgrades";
+type WTS_LineMetaType = "Name" | "Tip" | "Ubertip";
+
+enum LineWordIndexMap {
+    StartIdentifier,
+    ObjectType,
+    FourCC,
+    ObjectName,
+    StringTypeShort, //tip, ubertip, name
+    StringType, //Name, Tooltip, Tooltip Extended
+}
 
 function generateEnumsFromWTS(fileContents: string) {
     let newFileContents = "";
@@ -83,71 +91,73 @@ function generateEnumsFromWTS(fileContents: string) {
      *
      */
 
+    /**
+     * @rule anytime we come across a parentheses, we want to start concatenating the following words until we reach a closing parentheses
+     */
+
+    // ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
+    let currentLine: string[] = [];
     let lastReadWord = "";
-    let lastReadObjectName = "";
-    let lastReadFourCC = "";
-    let lastReadObjectType: WTS_ObjectTypes | null = null;
-    let haveBegunReadingNewObjectName = false;
-    let haveEndedReadingNewObjectName = false;
-    let grabFourCCFromNextWord = false;
+    // let isReadingMultiWordObjectName = false;
+    let concatenatingWordsInProgress = false;
+    let firstCompositeWordAdded = false;
 
     //This does preserve the line breaks and the spaces
     for (let x = 0; x < fileContents.length; x++) {
         const char = fileContents[x];
+        const nextChar = fileContents[x + 1];
 
-        //Identify spaces to identify words
-        //Identify double slashes to identify object data we want to read
+        //At this point, we might have all the relevant data to create the new enum member, now we simple check our array of words for the line
+        if (char === "\n") {
+            newFileContents += "\n//";
+            currentLine.forEach((word) => {
+                newFileContents += word;
+            });
+
+            if (currentLine.includes("Name")) {
+                newFileContents += "\n//current line includes name";
+
+                const newLine = `\n${currentLine[3]} = FourCC(${currentLine[2]}),`;
+                objectTypesEnumStrings.set(currentLine[1] as WTS_ObjectTypes, newLine);
+               
+            }
+
+                currentLine = [];
+            lastReadWord = "";
+
+            // if (currentLine.length > 0) {
+            //     newFileContents += `\n//Current line length: ${currentLine.length}`;
+            // }
+        }
 
         //means we have reached the end of the current word. here is where we check the word to orient ourself in the file contents
-        if (char === " ") {
-            const knownObjectType = objectTypeIdentifier.has(lastReadWord);
+        //its possible last read word is still empty therefore we do not want to add that to our array.
+        if (char === " " && lastReadWord) {
+            //while were concatenating words, we do not want to push any new words into our array.
 
-            //We have our object type and four cc and now we have our object name
-            if (lastReadFourCC && lastReadObjectType) {
-                newFileContents += `\n//found object name`;
-
-                //We have read both an object type and a four CC, therefore our next word will now be the object name
-                //Here we have confirmed that the last read word will be the object name, according to how the wts file outputs object data
-
-                //We identify if we are at the end of our object name
-                if (lastReadWord.includes(")")) {
-                    haveEndedReadingNewObjectName = true;
-                }
-
-                //Clean the last read word
-                lastReadWord = lastReadWord.replace("(", "");
-                lastReadWord = lastReadWord.replace(")", "");
-
-                //We know we are reading an object name, therefore we must start concatenating the name for the enum member name
-                lastReadObjectName += lastReadWord;
+            //detect if we need to concatenate words
+            if (shouldConcatWords(lastReadWord)) {
+                concatenatingWordsInProgress = true;
+                newFileContents += "\n//We are concatenating words now";
+            } else if (!concatenatingWordsInProgress) {
+                currentLine.push(lastReadWord);
             }
 
-            if (haveEndedReadingNewObjectName && lastReadObjectName && lastReadObjectType) {
-                let objectTypeEnumStringContents = objectTypesEnumStrings.get(lastReadObjectType);
-                const newLine = `\n${lastReadObjectName} = FourCC(${lastReadFourCC}),`;
-                objectTypeEnumStringContents += newLine;
-
-                newFileContents += `\n//a new enum member was created - ${newLine}`;
-
-                //Now clear the data for our temp variables
-                lastReadWord = "";
-                lastReadObjectName = "";
-                lastReadFourCC = "";
-                lastReadObjectType = null;
-                grabFourCCFromNextWord = false;
+            if (concatenatingWordsInProgress && !firstCompositeWordAdded) {
+                //This is the first word in the sequence, therefore push to the array
+                currentLine.push(lastReadWord);
+                firstCompositeWordAdded = true;
             }
 
-            if (grabFourCCFromNextWord && lastReadObjectType) {
-                lastReadFourCC = lastReadWord;
+            //We have already begun our composite word sequence
+            if (concatenatingWordsInProgress && firstCompositeWordAdded) {
+                //Add last read word to it
+                currentLine[currentLine.length - 1] += lastReadWord;
             }
 
-            if (knownObjectType) {
-                grabFourCCFromNextWord = true;
-                newFileContents += "\n//found object type identifier";
-
-                lastReadObjectType = objectTypeIdentifier.get(lastReadWord) ?? null;
-            } else {
-                grabFourCCFromNextWord = false;
+            //Check if we still need to concatenate words, we are done if its an end parentheses and theres a space after it.
+            if (lastReadWord.includes(")") && nextChar === " ") {
+                concatenatingWordsInProgress = false;
             }
 
             //reset word after we have made use of it
@@ -166,4 +176,8 @@ function generateEnumsFromWTS(fileContents: string) {
     }
 
     fs.writeFileSync("src/parser-test/GeneratedEnums.ts", newFileContents);
+}
+
+function shouldConcatWords(word: string) {
+    return word.includes("(") && !word.includes(")");
 }
