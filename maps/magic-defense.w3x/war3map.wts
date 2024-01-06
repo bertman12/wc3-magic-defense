@@ -333,14 +333,8 @@ STRING 62
 Personal Fountain - I
 }
 
-STRING 63
-// Abilities: A000 (Multishot), Name (Name)
-{
-Multishot
-}
-
 STRING 64
-// Abilities: A000 (Multishot), EditorSuffix (Editor Suffix)
+// Abilities: A000 (|cff00ff00Multishot|r), EditorSuffix (Editor Suffix)
 {
 (Item)
 }
@@ -363,14 +357,8 @@ STRING 67
 Flame Rune
 }
 
-STRING 68
-// Abilities: A001 (Flame Rune), Name (Name)
-{
-Flame Rune
-}
-
 STRING 69
-// Abilities: A001 (Flame Rune), EditorSuffix (Editor Suffix)
+// Abilities: A001 (|cff00ff00F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|), EditorSuffix (Editor Suffix)
 {
 (Pheonix Fire)
 }
@@ -445,5 +433,17 @@ STRING 81
 // Units: h00G (testing parser), Name (Name)
 {
 testing parser
+}
+
+STRING 88
+// Abilities: A000 (|cff00ff00Multishot|r), Name (Name)
+{
+|cff00ff00Multishot|r
+}
+
+STRING 89
+// Abilities: A001 (|cff00ff00F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|), Name (Name)
+{
+|cff00ff00F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
 }
 

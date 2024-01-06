@@ -17,23 +17,22 @@ try {
     fs.writeFileSync("src/war3map.d.ts", result);
 
     const wtsFileContents = fs.readFileSync(wtsFile, "utf8");
-    const folderExists = fs.pathExistsSync("src/parser-test");
+    const folderExists = fs.pathExistsSync("src/WTS Generated Enums");
 
     if (folderExists) {
         generateEnumsFromWTS(wtsFileContents);
     } else {
-        fs.mkdirSync("src/parser-test");
+        fs.mkdirSync("src/WTS Generated Enums");
         generateEnumsFromWTS(wtsFileContents);
     }
 } catch (err: any) {
     logger.error(err.toString());
     logger.error(`There was an error generating the definition file for '${luaFile}'`);
 }
-
+//79 character limit for object name on a single line unless its in the {} section
 function generateEnumsFromWTS(fileContents: string) {
     let newFileContents = "";
-    type WTS_ObjectTypes = "Units" | "Items" | "Abilities" | "Buffs" | "Upgrades";
-    type WTS_LineMetaType = "Name" | "Tip" | "Ubertip";
+    type WTS_ObjectTypes = "Units" | "Items" | "Destructibles" | "Doodads" | "Abilities" | "Buffs" | "Upgrades";
 
     enum LineWordIndexMap {
         StartIdentifier,
@@ -41,30 +40,26 @@ function generateEnumsFromWTS(fileContents: string) {
         FourCC,
         ObjectName,
         MetaLineTypeShort, //tip, ubertip, name
-        MetaLineType, //Name, Tooltip, Tooltip Extended
+        MetaLineType, //(Name), Tooltip, Tooltip Extended
     }
-
-    //For fucking around
-    const charReplacementMap = new Map<string, string>([
-        [" ", "-space-"],
-        ["\n", "-new-line-"],
-        ["\t", "-tab-"],
-        ["-", "_"],
-    ]);
 
     //To be concatenated together for the new file contents for generated enums
     const objectTypesEnumStrings = new Map<WTS_ObjectTypes, string>([
         ["Units", ""],
-        ["Abilities", ""],
         ["Items", ""],
+        ["Destructibles", ""],
+        ["Doodads", ""],
+        ["Abilities", ""],
         ["Buffs", ""],
         ["Upgrades", ""],
     ]);
 
     //Maps which specific strings in the file contents will map to which object type in the editor
-    const objectTypeIdentifier = new Map<string, WTS_ObjectTypes>([
+    const objectTypeIdentifierToEnumName = new Map<string, WTS_ObjectTypes>([
         ["Units:", "Units"],
         ["Items:", "Items"],
+        ["Destructibles:", "Destructibles"],
+        ["Doodads:", "Doodads"],
         ["Abilities:", "Abilities"],
         ["Buffs:", "Buffs"],
         ["Upgrades:", "Upgrades"],
@@ -73,35 +68,23 @@ function generateEnumsFromWTS(fileContents: string) {
     //Used when we create our enums at the end. We can also make this configurable in the config.json file to be to the user's preference
     const objectTypeEnumNames = new Map<WTS_ObjectTypes, string>([
         ["Units", "WTS_Units"],
-        ["Abilities", "WTS_Abilities"],
         ["Items", "WTS_Items"],
+        ["Destructibles", "WTS_Destructibles"],
+        ["Doodads", "WTS_Doodads"],
+        ["Abilities", "WTS_Abilities"],
         ["Buffs", "WTS_Buffs"],
         ["Upgrades", "WTS_Upgrades"],
     ]);
 
-    const uniqueWordsForEnum = new Map<WTS_ObjectTypes, Set<string>>([
+    const uniqueEnumMemberNames = new Map<WTS_ObjectTypes, Set<string>>([
         ["Units", new Set<string>()],
-        ["Abilities", new Set<string>()],
         ["Items", new Set<string>()],
+        ["Destructibles", new Set<string>()],
+        ["Doodads", new Set<string>()],
+        ["Abilities", new Set<string>()],
         ["Buffs", new Set<string>()],
         ["Upgrades", new Set<string>()],
     ]);
-
-    /**
-     * @goals
-     *
-     * @one determine format for how one object string begins and ends
-     * @two identify which category of object data does this string correlate with
-     * @three grab the name of the object and the FourCC code
-     * @four check if the enum name is already in use, if so, then append_copy####
-     * @five add that to the appropriate enum
-     * @six bundle the strings together to create one file of generated enums to be used in the project
-     *
-     */
-
-    /**
-     * @rule anytime we come across a parentheses, we want to start concatenating the following words until we reach a closing parentheses
-     */
 
     // ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
     let currentLineWords: string[] = [];
@@ -109,35 +92,22 @@ function generateEnumsFromWTS(fileContents: string) {
     let concatenatingWordsInProgress = false;
     let firstCompositeWordAdded = false;
 
-    /**
-     * What I think its doing
-     * 0 - lastReadWord = //
-     * 1 - lastReadWord = Units:
-     * 2 - lastReadWord = h000
-       3 -  * lastReadWord = (My
-       3 -  * lastReadWord = Object
-       3 -  * lastReadWord = Name)
-    *  4 - Name
-    *  5 - (Name)
-     */
-
-    /**
-     * for tracking duplicate words, we can simply add all the object names that are in each enum block into a set or words, if the set already has the object name, then we can append the fourCC code to the name - Chaos_R004
-     */
-
-    //This does preserve the line breaks and the spaces
     for (let x = 0; x < fileContents.length; x++) {
         const char = fileContents[x];
 
-        //At this point, we might have all the relevant data to create the new enum member, now we simple check our array of words for the line
         if (char === "\n") {
             if (currentLineWords[LineWordIndexMap.MetaLineTypeShort] === "Name" && currentLineWords[LineWordIndexMap.ObjectName]) {
+                const enumForObjectType = objectTypeIdentifierToEnumName.get(currentLineWords[LineWordIndexMap.ObjectType]);
+                const currentEnumString = objectTypesEnumStrings.get(enumForObjectType as WTS_ObjectTypes);
+
                 currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("(", "");
                 currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(")", "");
                 currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace(",", "");
 
-                const enumForObjectType = objectTypeIdentifier.get(currentLineWords[LineWordIndexMap.ObjectType]);
-                const currentEnumString = objectTypesEnumStrings.get(enumForObjectType as WTS_ObjectTypes);
+                //Clean word before checking if name is already used
+                currentLineWords[LineWordIndexMap.ObjectName] = removeColorCodingFromWord(currentLineWords[LineWordIndexMap.ObjectName]);
+                currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("|r", "");
+                // currentLineWords[LineWordIndexMap.ObjectName] = currentLineWords[LineWordIndexMap.ObjectName].replace("|", "");
 
                 const pattern = new RegExp("^[A-Za-z0-9]+$");
 
@@ -150,14 +120,16 @@ function generateEnumsFromWTS(fileContents: string) {
                     }
                 }
 
-                const enumMemberWordSet = uniqueWordsForEnum.get(enumForObjectType as WTS_ObjectTypes);
+                //9 characters following the |
+                const enumMemberWordSet = uniqueEnumMemberNames.get(enumForObjectType as WTS_ObjectTypes);
 
+                //Add the new enum member
                 if (enumMemberWordSet?.has(currentLineWords[LineWordIndexMap.ObjectName])) {
-                    const newEnumMember = `${currentEnumString ? "\n" : ""}  ${currentLineWords[LineWordIndexMap.ObjectName]}_${currentLineWords[LineWordIndexMap.FourCC]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[LineWordIndexMap.ObjectName]}_${currentLineWords[LineWordIndexMap.FourCC]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
 
                     objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
                 } else {
-                    const newEnumMember = `${currentEnumString ? "\n" : ""}  ${currentLineWords[LineWordIndexMap.ObjectName]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
+                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[LineWordIndexMap.ObjectName]} = FourCC("${currentLineWords[LineWordIndexMap.FourCC]}"),`;
 
                     objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
 
@@ -172,11 +144,7 @@ function generateEnumsFromWTS(fileContents: string) {
             lastReadWord = "";
         }
 
-        //means we have reached the end of the current word. here is where we check the word to orient ourself in the file contents
-        //its possible last read word is still empty therefore we do not want to add that to our array.
         if (char === " " && lastReadWord) {
-            //while were concatenating words, we do not want to push any new words into our array.
-
             //detect if we need to concatenate words
             if (shouldConcatWords(lastReadWord)) {
                 concatenatingWordsInProgress = true;
@@ -188,16 +156,12 @@ function generateEnumsFromWTS(fileContents: string) {
                 currentLineWords[currentLineWords.length - 1] += lastReadWord;
             }
 
-            //If we are adding word but haven't started yet, then push the first word into the array
+            //If we are making a composite word but haven't started yet, then push the first word into the array
             if (concatenatingWordsInProgress && !firstCompositeWordAdded) {
-                //This is the first word in the sequence, therefore push to the array
                 currentLineWords.push(lastReadWord);
                 firstCompositeWordAdded = true;
             }
 
-            /**
-             * on our next pass, if we have just completed a composite word, then we can start pushing new items in the array as normal
-             */
             if (!concatenatingWordsInProgress) {
                 currentLineWords.push(lastReadWord);
             }
@@ -205,7 +169,7 @@ function generateEnumsFromWTS(fileContents: string) {
             //Check if we still need to concatenate words, we are done if its an end parentheses and theres a space after it.
             //Example word is Name) therefore we should not push this word into the array it should just be added the last item in the array to complete
             //the composite word
-            if (lastReadWord.includes(")") || lastReadWord.includes("),")) {
+            if (isFinalWordInConcatenationSequence(lastReadWord)) {
                 concatenatingWordsInProgress = false;
                 firstCompositeWordAdded = false;
             }
@@ -218,17 +182,6 @@ function generateEnumsFromWTS(fileContents: string) {
         }
     }
 
-    /**
-     * What I think its doing
-     * 0 - lastReadWord = //
-     * 1 - lastReadWord = Units:
-     * 2 - lastReadWord = h000
-       3 -  * lastReadWord = (My
-       3 -  * lastReadWord = Object
-       3 -  * lastReadWord = Name)
-    *  4 - Name
-    *  5 - (Name)
-     */
     //Now we create our enums with the string data we parsed
     for (const [key, value] of objectTypesEnumStrings) {
         const newEnumName = objectTypeEnumNames.get(key);
@@ -238,9 +191,61 @@ function generateEnumsFromWTS(fileContents: string) {
         }
     }
 
-    fs.writeFileSync("src/parser-test/GeneratedEnums.ts", newFileContents);
+    fs.createFileSync("src/WTS Generated Enums/WTS_Enums.ts");
+    fs.writeFileSync("src/WTS Generated Enums/WTS_Enums.ts", newFileContents);
 }
 
 function shouldConcatWords(word: string) {
     return word.includes("(") && !word.includes(")");
+}
+
+function isFinalWordInConcatenationSequence(word: string) {
+    return word.includes(")") || word.includes("),");
+}
+
+/**
+ * Removes color coding from word for clean enum member names
+ * Its possible there are multiple color coding sequences in the string
+ * @param word
+ * @returns
+ */
+function removeColorCodingFromWord(word: string) {
+    //Input
+    //|cff00ff00F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    //F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    //l|r|cff37c737
+    //a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    //m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    //e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    // |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    //R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
+    //u|r|cffe11de1n|r|cfffe00fee|r
+    //n|r|cfffe00fee|r
+    //e|r
+
+    //Output
+    //F|rl|r_ra_rm_re_r_r_
+
+    if (word.includes("|cff")) {
+        //iterate through word, find every point where there is a |cff then remove the following 9 characters from the word
+        for (let x = 0; x < word.length; x++) {
+            const char = word[x];
+            //Color code sequence detected
+
+            if (char === "|" && word[x + 1] === "c" && word[x + 2] === "f" && word[x + 3] === "f") {
+                //remove 10 characters
+                const chars = word.split("");
+
+                for (let i = x; i < x + 10; i++) {
+                    chars[i] = "";
+                }
+
+                word = chars.join("");
+            }
+        }
+
+        return word;
+    } else {
+        return word;
+    }
 }

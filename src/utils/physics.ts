@@ -79,6 +79,8 @@ export function applyForce(angle: number, unit: Unit, initialSpeed: number, conf
     });
 }
 
+
+
 // const unitIsMovingVector_x = (unit.moveSpeed / updatesPerSecond) * Math.cos(Deg2Rad(unit.facing));
 // const unitIsMovingVector_y = (unit.moveSpeed / updatesPerSecond) * Math.sin(Deg2Rad(unit.facing));
 // if ((moveOrders.includes(unit.currentOrder) && unitIsMovingVector_x > xVelocity) || unitIsMovingVector_y > yVelocity) {

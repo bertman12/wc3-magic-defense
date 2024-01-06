@@ -1,7 +1,10 @@
 {
-  "mapFolder": "magic-defense.w3x",
-  "minifyScript": false,
-  "gameExecutable": "C:\\Program Files\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe",
-  "outputFolder": "./dist/bin",
-  "launchArgs": ["-launch"]
+    "mapFolder": "magic-defense.w3x",
+    "minifyScript": false,
+    "gameExecutable": "C:\\Program Files\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe",
+    "outputFolder": "./dist/bin",
+    "launchArgs": ["-launch"],
+    "wtsParserPreferredEnumNames": {
+        "units": "WTS_Units"
+    }
 }
