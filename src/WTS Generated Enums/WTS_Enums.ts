@@ -30,6 +30,14 @@ export enum WTS_Items{
 	FlameRune = FourCC("I005"),
 }
 
+export enum WTS_Destructibles{
+	WinterTreeWallCustom = FourCC("B000"),
+}
+
+export enum WTS_Doodads{
+	TrashCustom = FourCC("D000"),
+}
+
 export enum WTS_Abilities{
 	Teleport = FourCC("A002"),
 	Multishot = FourCC("A000"),

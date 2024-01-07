@@ -459,3 +459,15 @@ STRING 93
 new buff baby
 }
 
+STRING 103
+// Doodads: D000 (Trash custom), Name (Name)
+{
+Trash custom
+}
+
+STRING 104
+// Destructibles: B000 (Winter Tree Wall custom), Name (Name)
+{
+Winter Tree Wall custom
+}
+
