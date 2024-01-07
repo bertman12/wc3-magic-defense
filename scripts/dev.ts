@@ -20,10 +20,10 @@ try {
     const folderExists = fs.pathExistsSync("src/WTS Generated Enums");
 
     if (folderExists) {
-        generateEnumsFromWTS(wtsFileContents);
+        generateEnumsFromWTSFile(wtsFileContents);
     } else {
         fs.mkdirSync("src/WTS Generated Enums");
-        generateEnumsFromWTS(wtsFileContents);
+        generateEnumsFromWTSFile(wtsFileContents);
     }
 } catch (err: any) {
     logger.error(err.toString());
@@ -31,39 +31,43 @@ try {
 }
 
 //79 character limit for object name on a single line unless its in the {} section
-function generateEnumsFromWTS(fileContents: string) {
+function generateEnumsFromWTSFile(fileContents: string) {
     let newFileContents = "";
-    type WTS_ObjectTypes = "Units" | "Items" | "Destructibles" | "Doodads" | "Abilities" | "Buffs" | "Upgrades";
+    type WTS_ObjectTypes = "Units" | "Items" | "Destructibles" | "Doodads" | "Abilities" | "Buffs/Effects" | "Upgrades";
 
-    enum TitleLineWordIndexMap {
+    enum TitleLineWordsIndexMap {
         StartIdentifier,
-        ObjectType,
+        ObjectDataTypeIndicator,
         FourCC,
-        ObjectName,
-        MetaLineTypeShort, //tip, ubertip, name
-        MetaLineType, //(Name), Tooltip, Tooltip Extended
+        ObjectNameLimited,
+        ObjectDataTypeShort, //tip, ubertip, name
+        ObjectDataTypeLong, //(Name), Tooltip, Tooltip Extended
+    }
+
+    enum Token {
+        DataBegin = "{",
+        DataEnd = "}",
+        TitleLineIndicator = "//",
+    }
+
+    enum ObjectDataTypeShort {
+        Name = "Name",
+        Tooltip = "Tip",
+        TooltipExtended = "Ubertip",
+        EditorName = "EditorName", //For buffs/effects
+        EditorSuffix = "EditorSuffix",
+        Hotkey = "Hotkey",
     }
 
     //To be concatenated together for the new file contents for generated enums
-    const objectTypesEnumStrings = new Map<WTS_ObjectTypes, string>([
+    const objectTypesEnumMembersString = new Map<WTS_ObjectTypes, string>([
         ["Units", ""],
         ["Items", ""],
         ["Destructibles", ""],
         ["Doodads", ""],
         ["Abilities", ""],
-        ["Buffs", ""],
+        ["Buffs/Effects", ""],
         ["Upgrades", ""],
-    ]);
-
-    //Maps which specific strings in the file contents will map to which object type in the editor
-    const objectTypeIdentifierToObjectType = new Map<string, WTS_ObjectTypes>([
-        ["Units:", "Units"],
-        ["Items:", "Items"],
-        ["Destructibles:", "Destructibles"],
-        ["Doodads:", "Doodads"],
-        ["Abilities:", "Abilities"],
-        ["Buffs:", "Buffs"],
-        ["Upgrades:", "Upgrades"],
     ]);
 
     //Used when we create our enums at the end. We can also make this configurable in the config.json file to be to the user's preference
@@ -73,7 +77,7 @@ function generateEnumsFromWTS(fileContents: string) {
         ["Destructibles", "WTS_Destructibles"],
         ["Doodads", "WTS_Doodads"],
         ["Abilities", "WTS_Abilities"],
-        ["Buffs", "WTS_Buffs"],
+        ["Buffs/Effects", "WTS_Buffs_Effects"],
         ["Upgrades", "WTS_Upgrades"],
     ]);
 
@@ -83,187 +87,85 @@ function generateEnumsFromWTS(fileContents: string) {
         ["Destructibles", new Set<string>()],
         ["Doodads", new Set<string>()],
         ["Abilities", new Set<string>()],
-        ["Buffs", new Set<string>()],
+        ["Buffs/Effects", new Set<string>()],
         ["Upgrades", new Set<string>()],
     ]);
 
-    enum Token {
-        DataBegin = "{",
-        DataEnd = "}",
-        TitleLineIndicator = "//",
-    }
-
-    enum ObjectDataTypeIndicator {
-        Name = "Name",
-        Tooltip = "Tip",
-        TooltipExtended = "Ubertip",
-        EditorSuffix = "EditorSuffix",
-        Hotkey = "Hotkey",
-    }
-
+    /**
+     * ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
+     */
+    let titleLineWords: string[] = [];
+    /**
+     * The line with the content that will be used as the enum member name
+     */
+    let dataLineValue = "";
     let currentLineWords: string[] = [];
     let lastReadWord = "";
     let concatenatingWordsInProgress = false;
     let firstCompositeWordAdded = false;
-
-    let dataLineValue = "";
     let storeNextLineAsEnumMemberName = false;
 
-    //used to hold onto the title line while we are parsing the following lines for the actual data. Title lines are indicated with //
-    // ["//", "Units:", "I000", "(Object Name)", "Name", "(Name)"]
-    let titleLineWords: string[] = [];
+    function clearAllStoredValues() {
+        storeNextLineAsEnumMemberName = false;
+        currentLineWords = [];
+        firstCompositeWordAdded = false;
+        concatenatingWordsInProgress = false;
+        dataLineValue = "";
+        titleLineWords = [];
+        lastReadWord = "";
+    }
 
-    /**
-     * @new_goals
-     * @one get the title line data and hold onto that
-     * @two get value from inside {}
-     *
-     * @title_line this line may not exist. if it does not exist then we skip saving lines until we actually come across a title line
-     * @object_data_line holds the data type value indicated in the title line; can be name, tooltips, editor suffix, hotkeys, etc.
-     *
-     * @warn if there is no space after a character and only a new line then we must store account for that when saving last read word; for instance } is on a single line and does not have a space after it, therefore it wont be saved in
-     * the last read word and this will not be saved in any of our line word arrays.
-     *
-     * This would also explain why the final words on a line are not in our word array
-     *
-     * we must know when to start saving the value in the object section of the object data. We can store that in a string and not an array, since the value there represents only one data type, the name in our case
-     *
-     * @other_goal the parser should simply capture every line indiscriminantly - we then process those lines and store the values if they are relevant to us
-     *
-     * END OF LINE - actions: store the line
-     */
+    function isTargetedDataType(dataType: string) {
+        return dataType == ObjectDataTypeShort.Name || dataType == ObjectDataTypeShort.EditorName;
+    }
 
     for (let x = 0; x < fileContents.length; x++) {
         const char = fileContents[x];
         const nextChar = fileContents[x + 1];
 
-        //we guarantee we are done reading data by checking current and next character
-        if (isEndOfLine(nextChar) && char === Token.DataEnd && titleLineWords.includes(Token.TitleLineIndicator) && titleLineWords[TitleLineWordIndexMap.MetaLineTypeShort] == ObjectDataTypeIndicator.Name) {
-            //Store the data as an enum value
-            newFileContents += "\n//ENUM created";
-
-            //Clear everything
-            storeNextLineAsEnumMemberName = false;
-            currentLineWords = [];
-            firstCompositeWordAdded = false;
-            concatenatingWordsInProgress = false;
-            dataLineValue = "";
-            titleLineWords = [];
-            lastReadWord = "";
-        }
-
         //End of line - process the values
         if (isEndOfLine(char)) {
             //Title line words are set the same line they are captured
-            if (currentLineWords.includes(Token.TitleLineIndicator) && currentLineWords[TitleLineWordIndexMap.MetaLineTypeShort] == ObjectDataTypeIndicator.Name) {
+            if (currentLineWords.includes(Token.TitleLineIndicator) && isTargetedDataType(currentLineWords[TitleLineWordsIndexMap.ObjectDataTypeShort])) {
                 //Store the title line
                 titleLineWords = [...currentLineWords];
-                newFileContents += "\n//TITLE line data captured";
             }
 
             //If we have anything stored from the data section then we can use that to add it do our enum
-            if (storeNextLineAsEnumMemberName && currentLineWords.length > 0 && titleLineWords[TitleLineWordIndexMap.MetaLineTypeShort] == ObjectDataTypeIndicator.Name) {
+            if (storeNextLineAsEnumMemberName && currentLineWords.length > 0 && isTargetedDataType(titleLineWords[TitleLineWordsIndexMap.ObjectDataTypeShort])) {
                 //Add words to the array; Words should be concatenated already, so there will only be one element
-
                 currentLineWords.forEach((word) => {
                     word.replace(" ", "");
                     dataLineValue += word;
                 });
 
-                newFileContents += `\n//DATA line data captured ${dataLineValue}`;
                 // we have all the necessary data at this point - now we can create our enum
+                let enumForObjectDataType = titleLineWords[TitleLineWordsIndexMap.ObjectDataTypeIndicator];
+                enumForObjectDataType = enumForObjectDataType.replace(":", "");
 
-                const enumForObjectDataType = objectTypeIdentifierToObjectType.get(titleLineWords[TitleLineWordIndexMap.ObjectType]);
-                const currentEnumString = objectTypesEnumStrings.get(enumForObjectDataType as WTS_ObjectTypes);
+                const currentEnumString = objectTypesEnumMembersString.get(enumForObjectDataType as WTS_ObjectTypes);
 
                 //Clean word before checking if name is already used
-                dataLineValue = dataLineValue.replace("(", "");
-                dataLineValue = dataLineValue.replace(")", "");
-                dataLineValue = dataLineValue.replace(",", "");
-                dataLineValue = removeColorCodingFromWord(dataLineValue);
-                dataLineValue = dataLineValue.replace("|r", "");
-
-                const pattern = new RegExp("^[A-Za-z0-9]+$");
-
-                //Replace illegal characters
-                for (let x = 0; x < dataLineValue.length; x++) {
-                    const c = dataLineValue[x];
-
-                    if (!pattern.test(c)) {
-                        dataLineValue = dataLineValue.replace(dataLineValue[x], "_");
-                    }
-                }
+                dataLineValue = removeIllegalCharactersFromEnumMemberName(dataLineValue);
 
                 const enumMemberWordSet = uniqueEnumMemberNames.get(enumForObjectDataType as WTS_ObjectTypes);
+                let newEnumMember = `${currentEnumString ? "\n" : ""}\t${dataLineValue} = FourCC("${titleLineWords[TitleLineWordsIndexMap.FourCC]}"),`;
 
-                //Add the new enum member
                 if (enumMemberWordSet?.has(dataLineValue)) {
                     //Handle duplicate name by appending _FourCC to end of name
-                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${dataLineValue}_${titleLineWords[TitleLineWordIndexMap.FourCC]} = FourCC("${titleLineWords[TitleLineWordIndexMap.FourCC]}"),`;
-
-                    objectTypesEnumStrings.set(enumForObjectDataType as WTS_ObjectTypes, currentEnumString + newEnumMember);
+                    newEnumMember = `${currentEnumString ? "\n" : ""}\t${dataLineValue}_${titleLineWords[TitleLineWordsIndexMap.FourCC]} = FourCC("${titleLineWords[TitleLineWordsIndexMap.FourCC]}"),`;
+                    objectTypesEnumMembersString.set(enumForObjectDataType as WTS_ObjectTypes, currentEnumString + newEnumMember);
                 } else {
-                    const newEnumMember = `${currentEnumString ? "\n" : ""}\t${dataLineValue} = FourCC("${titleLineWords[TitleLineWordIndexMap.FourCC]}"),`;
-
-                    objectTypesEnumStrings.set(enumForObjectDataType as WTS_ObjectTypes, currentEnumString + newEnumMember);
-
-                    if (enumMemberWordSet) {
-                        enumMemberWordSet.add(dataLineValue);
-                    }
+                    enumMemberWordSet?.add(dataLineValue);
                 }
 
-                //Reset since we captured the necessary data
-                storeNextLineAsEnumMemberName = false;
-                currentLineWords = [];
-                firstCompositeWordAdded = false;
-                concatenatingWordsInProgress = false;
-                dataLineValue = "";
-                titleLineWords = [];
-                lastReadWord = "";
+                objectTypesEnumMembersString.set(enumForObjectDataType as WTS_ObjectTypes, currentEnumString + newEnumMember);
+
+                //Reset stored data since we captured the necessary data
+                clearAllStoredValues();
             }
 
-            // if (currentLineWords[TitleLineWordIndexMap.MetaLineTypeShort] === ObjectDataTypeIndicator.Name && currentLineWords[TitleLineWordIndexMap.ObjectName]) {
-            //     const enumForObjectType = objectTypeIdentifierToObjectType.get(currentLineWords[TitleLineWordIndexMap.ObjectType]);
-            //     const currentEnumString = objectTypesEnumStrings.get(enumForObjectType as WTS_ObjectTypes);
-
-            //     //Clean word before checking if name is already used
-            //     currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace("(", "");
-            //     currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace(")", "");
-            //     currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace(",", "");
-            //     currentLineWords[TitleLineWordIndexMap.ObjectName] = removeColorCodingFromWord(currentLineWords[TitleLineWordIndexMap.ObjectName]);
-            //     currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace("|r", "");
-
-            //     const pattern = new RegExp("^[A-Za-z0-9]+$");
-
-            //     //Replace illegal characters
-            //     for (let x = 0; x < currentLineWords[TitleLineWordIndexMap.ObjectName].length; x++) {
-            //         const c = currentLineWords[TitleLineWordIndexMap.ObjectName][x];
-
-            //         if (!pattern.test(c)) {
-            //             currentLineWords[TitleLineWordIndexMap.ObjectName] = currentLineWords[TitleLineWordIndexMap.ObjectName].replace(currentLineWords[TitleLineWordIndexMap.ObjectName][x], "_");
-            //         }
-            //     }
-
-            //     const enumMemberWordSet = uniqueEnumMemberNames.get(enumForObjectType as WTS_ObjectTypes);
-
-            //     //Add the new enum member
-            //     if (enumMemberWordSet?.has(currentLineWords[TitleLineWordIndexMap.ObjectName])) {
-            //         //Handle duplicate name by appending _FourCC to end of name
-            //         const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[TitleLineWordIndexMap.ObjectName]}_${currentLineWords[TitleLineWordIndexMap.FourCC]} = FourCC("${currentLineWords[TitleLineWordIndexMap.FourCC]}"),`;
-
-            //         objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
-            //     } else {
-            //         const newEnumMember = `${currentEnumString ? "\n" : ""}\t${currentLineWords[TitleLineWordIndexMap.ObjectName]} = FourCC("${currentLineWords[TitleLineWordIndexMap.FourCC]}"),`;
-
-            //         objectTypesEnumStrings.set(enumForObjectType as WTS_ObjectTypes, currentEnumString + newEnumMember);
-
-            //         if (enumMemberWordSet) {
-            //             enumMemberWordSet.add(currentLineWords[TitleLineWordIndexMap.ObjectName]);
-            //         }
-            //     }
-            // }
-
-            //Current line is reset once we reach new line symbol
+            //Current line is reset once we reach end of line
             currentLineWords = [];
             lastReadWord = "";
         }
@@ -297,26 +199,22 @@ function generateEnumsFromWTS(fileContents: string) {
             if (isFinalWordInConcatenationSequence(lastReadWord)) {
                 concatenatingWordsInProgress = false;
                 firstCompositeWordAdded = false;
-                newFileContents += `\n//CONCATENATION COMPLETE - ${currentLineWords[currentLineWords.length - 1]}`;
             }
 
             //reset word after we have made use of it
             lastReadWord = "";
         } else if (char !== "\n" && char !== Token.DataBegin && char !== Token.DataEnd) {
-            //Building the next word
             lastReadWord += char;
         }
 
-        //Determine whether or not we care about the value in the next line
-        //ObjectDataTypeIndicator.Name is our data target - we want that data really bad
-        if (char === Token.DataBegin && titleLineWords.includes(Token.TitleLineIndicator) && titleLineWords[TitleLineWordIndexMap.MetaLineTypeShort] == ObjectDataTypeIndicator.Name) {
+        //Determine whether or not next line will be used for enum member name
+        if (char === Token.DataBegin && titleLineWords.includes(Token.TitleLineIndicator) && isTargetedDataType(titleLineWords[TitleLineWordsIndexMap.ObjectDataTypeShort])) {
             storeNextLineAsEnumMemberName = true;
-            newFileContents += "\n//DATA CAPTURE = TRUE";
         }
     }
 
     //Now we create our enums with the string data we parsed
-    for (const [key, value] of objectTypesEnumStrings) {
+    for (const [key, value] of objectTypesEnumMembersString) {
         const newEnumName = objectTypeEnumNames.get(key);
 
         if (key && value) {
@@ -356,22 +254,6 @@ function isFinalWordInConcatenationSequence(word: string) {
  * @returns
  */
 function removeColorCodingFromWord(word: string) {
-    //Input
-    //|cff00ff00F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    //F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    //l|r|cff37c737
-    //a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    //m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    //e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    // |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    //R|r|cffc539c5u|r|cffe11de1n|r|cfffe00fee|r
-    //u|r|cffe11de1n|r|cfffe00fee|r
-    //n|r|cfffe00fee|r
-    //e|r
-
-    //Output
-    //Fl_r_ra_rm_re_r_r_
-
     if (word.includes("|cff")) {
         //iterate through word, find every point where there is a |cff then remove the following 9 characters from the word
         for (let x = 0; x < word.length; x++) {
@@ -379,7 +261,7 @@ function removeColorCodingFromWord(word: string) {
             //Color code sequence detected
 
             if (char === "|" && word[x + 1] === "c" && word[x + 2] === "f" && word[x + 3] === "f") {
-                //remove 10 characters
+                //remove the color formatting characters
                 const chars = word.split("");
 
                 for (let i = x; i < x + 10; i++) {
@@ -394,4 +276,27 @@ function removeColorCodingFromWord(word: string) {
     } else {
         return word;
     }
+}
+
+function removeIllegalCharactersFromEnumMemberName(word: string) {
+    //Clean word before checking if name is already used
+    word = word.replace("(", "");
+    word = word.replace(")", "");
+    word = word.replace(",", "");
+    word = removeColorCodingFromWord(word);
+    word = word.replace(/\|n/g, "");
+    word = word.replace(/\|r/g, "");
+
+    const pattern = new RegExp("^[A-Za-z0-9]+$");
+
+    //Replace characters not included in the above replace block with _ . Purely opinionated stylistic choice. Nice for replacing - with _
+    for (let x = 0; x < word.length; x++) {
+        const c = word[x];
+
+        if (!pattern.test(c)) {
+            word = word.replace(word[x], "_");
+        }
+    }
+
+    return word;
 }

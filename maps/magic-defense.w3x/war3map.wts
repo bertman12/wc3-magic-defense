@@ -447,3 +447,15 @@ STRING 91
 |cff00ff00F|r|cff1be31bl|r|cff37c737a|r|cff54aa54m|r|cff708e70e|r|cff8c728c |r|cffa955a9R|r|cffc539c5u|r|cffe11de1n|r
 }
 
+STRING 92
+// Buffs/Effects: X000 (omg my new effect), EditorName (Name (Editor Only))
+{
+omg my new effect
+}
+
+STRING 93
+// Buffs/Effects: B000 (new buff baby), EditorName (Name (Editor Only))
+{
+new buff baby
+}
+
