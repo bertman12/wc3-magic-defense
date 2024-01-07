@@ -17,12 +17,12 @@ try {
     fs.writeFileSync("src/war3map.d.ts", result);
 
     const wtsFileContents = fs.readFileSync(wtsFile, "utf8");
-    const folderExists = fs.pathExistsSync("src/WTS Generated Enums");
+    const folderExists = fs.pathExistsSync(config.wtsParserOutputFolder);
 
     if (folderExists) {
         generateEnumsFromWTSFile(wtsFileContents);
     } else {
-        fs.mkdirSync("src/WTS Generated Enums");
+        fs.mkdirSync(config.wtsParserOutputFolder);
         generateEnumsFromWTSFile(wtsFileContents);
     }
 } catch (err: any) {
@@ -70,15 +70,25 @@ function generateEnumsFromWTSFile(fileContents: string) {
         ["Upgrades", ""],
     ]);
 
+    const {
+        units: enumNameUnits,
+        items: enumNameItems,
+        destructibles: enumNameDestructibles,
+        doodads: enumNameDoodads,
+        abilities: enumNameAbilities,
+        buffsEffects: enumNameBuffsEffects,
+        upgrades: enumNameUpgrades,
+    } = config.wtsParserGeneratedEnumNames;
+
     //Used when we create our enums at the end. We can also make this configurable in the config.json file to be to the user's preference
     const objectTypeEnumNames = new Map<WTS_ObjectTypes, string>([
-        ["Units", "WTS_Units"],
-        ["Items", "WTS_Items"],
-        ["Destructibles", "WTS_Destructibles"],
-        ["Doodads", "WTS_Doodads"],
-        ["Abilities", "WTS_Abilities"],
-        ["Buffs/Effects", "WTS_Buffs_Effects"],
-        ["Upgrades", "WTS_Upgrades"],
+        ["Units", enumNameUnits],
+        ["Items", enumNameItems],
+        ["Destructibles", enumNameDestructibles],
+        ["Doodads", enumNameDoodads],
+        ["Abilities", enumNameAbilities],
+        ["Buffs/Effects", enumNameBuffsEffects],
+        ["Upgrades", enumNameUpgrades],
     ]);
 
     const uniqueEnumMemberNames = new Map<WTS_ObjectTypes, Set<string>>([
@@ -134,10 +144,18 @@ function generateEnumsFromWTSFile(fileContents: string) {
             //If we have anything stored from the data section then we can use that to add it do our enum
             if (storeNextLineAsEnumMemberName && currentLineWords.length > 0 && isTargetedDataType(titleLineWords[TitleLineWordsIndexMap.ObjectDataTypeShort])) {
                 //Add words to the array; Words should be concatenated already, so there will only be one element
+
+                //Pascal Case
                 currentLineWords.forEach((word) => {
-                    word.replace(" ", "");
+                    const chars = word.split("");
+                    chars[0] = chars[0].toUpperCase();
+                    word = chars.join("");
+
                     dataLineValue += word;
                 });
+
+                //Snake Case
+                // dataLineValue = currentLineWords.join("_");
 
                 // we have all the necessary data at this point - now we can create our enum
                 let enumForObjectDataType = titleLineWords[TitleLineWordsIndexMap.ObjectDataTypeIndicator];
@@ -222,8 +240,8 @@ function generateEnumsFromWTSFile(fileContents: string) {
         }
     }
 
-    fs.createFileSync("src/WTS Generated Enums/WTS_Enums.ts");
-    fs.writeFileSync("src/WTS Generated Enums/WTS_Enums.ts", newFileContents);
+    fs.createFileSync(`${config.wtsParserOutputFolder}/WTS_Enums.ts`);
+    fs.writeFileSync(`${config.wtsParserOutputFolder}/WTS_Enums.ts`, newFileContents);
 }
 
 /**
@@ -249,7 +267,6 @@ function isFinalWordInConcatenationSequence(word: string) {
 
 /**
  * Removes color coding from word for clean enum member names
- * Its possible there are multiple color coding sequences in the string
  * @param word
  * @returns
  */
@@ -291,9 +308,9 @@ function removeIllegalCharactersFromEnumMemberName(word: string) {
 
     //Replace characters not included in the above replace block with _ . Purely opinionated stylistic choice. Nice for replacing - with _
     for (let x = 0; x < word.length; x++) {
-        const c = word[x];
+        const char = word[x];
 
-        if (!pattern.test(c)) {
+        if (!pattern.test(char)) {
             word = word.replace(word[x], "_");
         }
     }

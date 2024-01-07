@@ -1,40 +1,4 @@
 
-// data type: Units:
-// data type: Items:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Units:
-// data type: Items:
-// data type: Items:
-// data type: Items:
-// data type: Items:
-// data type: Items:
-// data type: Abilities:
-// data type: Upgrades:
-// data type: Upgrades:
-// data type: Upgrades:
-// data type: Units:
-// data type: Upgrades:
-// data type: Upgrades:
-// data type: Upgrades:
-// data type: Units:
-// data type: Abilities:
-// data type: Abilities:
-// data type: Buffs/Effects:
-// data type: Buffs/Effects:
 export enum WTS_Units{
 	BloodElfSurvivor = FourCC("H000"),
 	ManaCoreFoundation = FourCC("n000"),
@@ -54,7 +18,7 @@ export enum WTS_Units{
 	FlameWall = FourCC("h00D"),
 	UpgradeCenter = FourCC("h00E"),
 	ItemShop = FourCC("h00F"),
-	testingparser = FourCC("h00G"),
+	TestingParser = FourCC("h00G"),
 }
 
 export enum WTS_Items{
@@ -73,8 +37,8 @@ export enum WTS_Abilities{
 }
 
 export enum WTS_Buffs_Effects{
-	omgmyneweffect = FourCC("X000"),
-	newbuffbaby = FourCC("B000"),
+	OmgMyNewEffect = FourCC("X000"),
+	NewBuffBaby = FourCC("B000"),
 }
 
 export enum WTS_Upgrades{
